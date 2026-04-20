@@ -1,0 +1,21 @@
+el comando echo "$$" me imprime el PID(process ID) de la terminal que estoy utilizando, es decir, el número de proceso que se le ha asignado a esa terminal en el sistema operativo. Esto puede ser útil para identificar y gestionar procesos específicos en la terminal.
+
+
+env(enviroment) es un comando que se utiliza para mostrar o modificar las variables de entorno en un sistema operativo. Cuando se ejecuta sin argumentos, env muestra una lista de todas las variables de entorno y sus valores actuales. También se puede usar para establecer nuevas variables de entorno o modificar las existentes antes de ejecutar un comando específico. Por ejemplo, env VAR=value command ejecutará el comando con la variable de entorno VAR establecida en value.
+
+strace(System trace) es una herramienta de diagnostico que se utiliza para rastrear las llamadas al sistema y las señales que un programa realiza durante su ejecucion
+
+"strace ls" rastreará las llamadas al sistema realizadas por el comando "ls", mostrando información detallada sobre cada llamada, como los archivos abiertos, las operaciones de lectura/escritura, y las señales recibidas. Esto puede ser útil para depurar problemas o entender el comportamiento de un programa.
+
+
+tree es como un ls pero te da la vista de carpetas y directorios en forma de arbol 
+
+ps(process status) te da una vista de los procesos que se estan ejecutando en el sistema , mostrando su PID y demas caracteristicas.
+
+
+
+File Descriptor : es un numero entero positivo  que el sistema  utiliza para identificar  y rastrear un archivo o recurso abierto por un proceso 
+
+ejemplo : Cuando un programa pide abrir un archivo, el sistema operativo realiza el trabajo pesado: busca el archivo en el disco, verifica permisos y prepara la comunicación. En lugar de devolverle al programa todo el objeto del archivo, le entrega un ID simplificado (0, 1, 2, 3...).
+
+A partir de ese momento, cada vez que el programa quiera leer o escribir, le dice al kernel: "Oye, escribe esto en el descriptor número 3".

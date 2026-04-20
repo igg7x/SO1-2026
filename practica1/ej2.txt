@@ -1,0 +1,37 @@
+Ej. 2. Conteste las siguientes preguntas. Puede ser ´util usar strace para monitorear las llamadas a
+sistema de un proceso, o top para ver la tabla de procesos del sistema.
+
+a) Si se cierra el file descriptor de la salida est´andar (1) ¿qu´e pasa al escribir al mismo?
+
+Falla de escritura: Las funciones de salida fallarán.
+Pérdida de datos: La información que debía mostrarse se pierde.
+Efectos secundarios: Si abres otro archivo después, podrías sobrescribirlo accidentalmente si tu código asume que el FD 1 sigue siendo la pantalla.
+
+b) Si se cierra el file descriptor de la entrada est´andar (0) ¿qu´e pasa al intentar leer del mismo?
+
+como hemos cerrado la entrada estandar , al intentar leer del mismo se producira un error de lectura , ya que el proceso no tendra acceso a la entrada estandar para recibir datos 
+
+c) Si un file descriptor se duplica con dup() ¿qu´e pasa al cerrar una de las copias?
+
+al duplicar un file descriptor con dup(), se crea una nueva referencia al mismo recurso subyacente. Si se cierra una de las copias, el recurso seguirá estando disponible a través de la otra copia, ya que ambas copias apuntan al mismo recurso. El cierre de una copia no afecta a la otra, y el recurso permanecerá abierto hasta que todas las copias sean cerradas.
+
+d) Al hacer fork(), ¿c´omo cambia el valor de getpid()? ¿Y al hacer exec()?
+
+
+
+
+e) Con fork(), cree dos procesos y haga que el hijo termine (con exit() o retornando del main) y que
+el padre duerma indefinidamente sin hacer wait(). ¿C´omo aparece el hijo en la tabla de procesos?
+¿Por qu´e sigue existiendo?
+
+f) Al hacer un malloc de 1GB ¿aumenta el uso de memoria de un proceso? Explique.
+
+g) ¿Qu´e pasa con el uso de memoria de un proceso al realizar fork()? ¿Y exec()?
+
+h) ¿Qu´e pasa con los file descriptor de un proceso al hacer fork()? ¿Y exec()?
+Al hacer un fork los file descriptors se heredan al proceso hijo , es decir , el hijo tendra acceso a los mismos file descriptors que el padre 
+Al hacer un exec 
+
+
+i) El comando de cambio de directorio cd suele ser un built-in de la shell. ¿Puede implementarse
+mediante un programa al igual que, ej., ls
