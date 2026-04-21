@@ -1,6 +1,7 @@
 #include<pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <semaphore.h>
 /* Producer/consumer program illustrating conditional variables */
 
 /* Size of shared buffer */
@@ -15,24 +16,33 @@ pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER ;
 pthread_cond_t cond_non_full =PTHREAD_COND_INITIALIZER ;  // condicion que queremos esperar , en este caso cuando el buffer no este lleno
 pthread_cond_t cond_non_empty =PTHREAD_COND_INITIALIZER ; 
 
+
+sem_t s_lugares ;
+sem_t s_ocupados  ; 
+
 /* Produce value(s) */
 void *producer(void *param)
 {
 	int i;
 	for (i=1; i<=20; i++) {
-		pthread_mutex_lock(&mutex);
-		while (BUF_SIZE == num)
-		{
-			pthread_cond_wait(&cond_non_full, &mutex);
-		}
+		
+		sem_wait(&s_lugares);
+		
+		 pthread_mutex_lock(&mutex);
+		// while (BUF_SIZE == num)
+		// {
+		// 	pthread_cond_wait(&cond_non_full, &mutex);
+		// }
 		/* Insert into buffer */
 		/* if executing here, buffer not full so add element */
 		buffer[add] = i;
 		add = (add+1) % BUF_SIZE;
 		num++;
 		printf ("producer: inserted %d\n", i);  fflush (stdout);
+		sem_post(&s_ocupados);
+
 		pthread_mutex_unlock(&mutex);
-		pthread_cond_signal(&cond_non_empty); 
+		// pthread_cond_signal(&cond_non_empty); 
 	}
 	printf ("producer quiting\n");  fflush (stdout);
 }
@@ -41,24 +51,30 @@ void *producer(void *param)
 void *consumer(void *param)
 {
 	int i;
-	while () {		
+	while (1) {		
+		sem_wait(&s_ocupados);
 		pthread_mutex_lock(&mutex);
-		while (num == 0 )
-		{
-			pthread_cond_wait(&cond_non_empty , &mutex);
-		}
+		// while (num == 0 )
+		// {
+		// 	pthread_cond_wait(&cond_non_empty , &mutex);
+		// }
 		/* if executing here, buffer not empty so remove element */
 		i = buffer[rem];
 		rem = (rem+1) % BUF_SIZE;
 		num--;
 		printf ("Consume value %d\n", i);  fflush(stdout);
-		pthread_mutex_unlock(&mutex);
-		pthread_cond_signal(&cond_non_full);
+		 pthread_mutex_unlock(&mutex);
+		// pthread_cond_signal(&cond_non_full);
+		sem_post(&s_lugares);
 	}
 }
 
 int main (int argc, char *argv[])
 {
+
+	sem_init(&s_lugares , 0 ,BUF_SIZE); // con el 0 del mdio indica que es para hilos
+	sem_init(&s_ocupados , 0 , 0);
+
 	pthread_t tid1, tid2;		/* thread identifiers */
 	int i;
 
@@ -75,5 +91,7 @@ int main (int argc, char *argv[])
 	pthread_join(tid1,NULL);
 	pthread_join(tid2,NULL);
 	printf ("Parent quiting\n");
+	sem_destroy(&s_lugares);
+	sem_destroy(&s_ocupados);
 	return 0 ;
 }
