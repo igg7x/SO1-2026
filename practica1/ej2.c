@@ -1,23 +1,26 @@
 #include <stdio.h>
 #include <unistd.h>
+#include <stdlib.h>
+#include <sys/wait.h>
 
-// int main()
-// {
-//     printf("Hola mundo\n");
-//     close(1); // Cerramos el descriptor de salida estandar
-//     write(1, "Esto no se imprimirá\n", 22); // Intentamos escribir en el descriptor cerrado
-//     printf("Esto no se imprimirá\n");
-//     return 0;
-
-// }
-
-
-int main(){
-
-    close(0) ; // Cerramos el descriptor de entrada estandar
-    char buffer[100];
-    printf("Introduce un texto: \n");
-    fgets(buffer, 100, stdin); // Intentamos leer del descriptor cerrado
-    printf("El texto introducido es: %s\n", buffer); // Esto no se imprimirá correctamente
+int main(int argc, char* argv[]){
+    if(argc <= 2)
+        return 1;
+    char* dir_binario = argv[1];
+    char path[256];
+    int seg = atoi(argv[2]);
+    sprintf(path,"./%s", dir_binario);
+    while (1)
+    {
+        pid_t pid = fork();
+        if (!pid)
+        {
+            execl(path, dir_binario, (char *)NULL);
+        }
+        else {
+            wait(NULL);
+            sleep(seg);
+        }
+    }
     return 0;
 }
