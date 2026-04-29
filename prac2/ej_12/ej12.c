@@ -15,6 +15,7 @@ void *foo(void *_arg)
 }
 
 // en este programa se crea un hilo que ejecuta la funcion foo, la cual imprime "Foo!" y luego duerme por 1 segundo. Mientras tanto, el hilo principal imprime "Bar!" y luego espera a que el hilo foo termine su ejecucion antes de finalizar el programa. El mutex a se utiliza para asegurar que no haya condiciones de carrera al acceder a la seccion critica del programa, que en este caso es la impresion de los mensajes en pantalla.
+
 int main()
 {
 
@@ -25,12 +26,10 @@ int main()
     // creo una copia del mutex a para usarlo en el hilo principal y evitar condiciones de carrera al acceder a la seccion critica
     pthread_mutex_t b = a;
     
-    pthread_mutex_lock(&b);
-
-    printf("Bar!\n");
-    sleep(1);
-
-    pthread_mutex_unlock(&b);
+     pthread_mutex_lock(&b);
+     printf("Bar!\n");
+     sleep(1);
+     pthread_mutex_unlock(&b);
     
     pthread_join(th, NULL);
     return 0;
