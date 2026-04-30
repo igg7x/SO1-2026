@@ -66,6 +66,142 @@ int mk_lsock()
     return lsock;
 }
 
+// Aceptar nueva conexión y agregarla a epoll
+void handle_new_connection(int epfd, int lsock)
+{
+    int csock = accept(lsock, NULL, NULL);
+    if (csock < 0)
+        return;
+
+    fcntl(csock, F_SETFL, O_NONBLOCK);
+
+    struct epoll_event ev;
+    ev.events = EPOLLIN;
+    ev.data.fd = csock;
+
+    epoll_ctl(epfd, EPOLL_CTL_ADD, csock, &ev);
+}
+
+// Procesar comando PUT: agregar clave-valor al store
+void handle_put(int fd, char *key, char *value)
+{
+    if (!key || !value)
+    {
+        write(fd, "EINVAL\n", 7);
+        return;
+    }
+
+    pthread_mutex_lock(&mutex_store);
+
+    if (is_key_exists(key, store, MAX_ITEMS))
+    {
+        pthread_mutex_unlock(&mutex_store);
+        write(fd, "KEY EXISTS\n", 11);
+    }
+    else
+    {
+        Item *item = malloc(sizeof(Item));
+        item->key = strdup(key);
+        item->value = strdup(value);
+        item->eliminated = 0;
+
+        put_item(item, store, MAX_ITEMS);
+
+        pthread_mutex_unlock(&mutex_store);
+        write(fd, "OK\n", 3);
+    }
+}
+
+// Procesar comando GET: obtener valor por clave
+void handle_get(int fd, char *key)
+{
+    if (!key)
+    {
+        write(fd, "EINVAL\n", 7);
+        return;
+    }
+
+    pthread_mutex_lock(&mutex_store);
+    Item *item = get_item(key, store, MAX_ITEMS);
+    pthread_mutex_unlock(&mutex_store);
+
+    if (item)
+    {
+        write(fd, "OK ", 3);
+        write(fd, item->value, strlen(item->value));
+        write(fd, "\n", 1);
+    }
+    else
+    {
+        write(fd, "NOTFOUND\n", 10);
+    }
+}
+
+// Procesar comando DEL: eliminar clave del store
+void handle_del(int fd, char *key)
+{
+    if (!key)
+    {
+        write(fd, "EINVAL\n", 7);
+        return;
+    }
+
+    pthread_mutex_lock(&mutex_store);
+    del_item(key, store, MAX_ITEMS);
+    pthread_mutex_unlock(&mutex_store);
+
+    write(fd, "OK\n", 3);
+}
+
+// Procesar pedido de un cliente
+void handle_client_request(int epfd, int fd)
+{
+    char buf[256];
+    int rc = read(fd, buf, sizeof(buf));
+
+    if (rc <= 0)
+    {
+        epoll_ctl(epfd, EPOLL_CTL_DEL, fd, NULL);
+        close(fd);
+        return;
+    }
+
+    char *newline = memchr(buf, '\n', rc);
+    if (!newline)
+        return;
+
+    *newline = '\0';
+
+    char *token = strtok(buf, " ");
+    if (!token)
+    {
+        write(fd, "EINVAL\n", 7);
+        return;
+    }
+
+    if (strcmp(token, PUT) == 0)
+    {
+        char *key = strtok(NULL, " ");
+        char *value = strtok(NULL, " ");
+        handle_put(fd, key, value);
+    }
+    else if (strcmp(token, GET) == 0)
+    {
+        char *key = strtok(NULL, " ");
+        handle_get(fd, key);
+    }
+    else if (strcmp(token, DEL) == 0)
+    {
+        char *key = strtok(NULL, " ");
+        handle_del(fd, key);
+    }
+    else
+    {
+        write(fd, "EINVAL\n", 7);
+    }
+}
+
+// Función principal que espera y procesa eventos con epoll
 void wait_clients_with_epoll(int epfd, int lsock, struct epoll_event evlist[])
 {
     while (1)
@@ -77,137 +213,19 @@ void wait_clients_with_epoll(int epfd, int lsock, struct epoll_event evlist[])
         for (int i = 0; i < n; i++)
         {
             int fd = evlist[i].data.fd;
+
             if (fd == lsock)
             {
-                // Aceptar la nueva conexión
-                int csock = accept(lsock, NULL, NULL);
-                if (csock < 0)
-                    continue;
-
-                fcntl(csock, F_SETFL, O_NONBLOCK);
-
-                struct epoll_event ev;
-                ev.events = EPOLLIN;
-                ev.data.fd = csock;
-
-                epoll_ctl(epfd, EPOLL_CTL_ADD, csock, &ev);
+                // Nueva conexión
+                handle_new_connection(epfd, lsock);
             }
-            else
+            else if (evlist[i].events & EPOLLIN)
             {
-                if (evlist[i].events & EPOLLIN)
-                {
-
-                    char buf[256];
-                    int rc = read(fd, buf, sizeof(buf));
-
-                    if (rc <= 0)
-                    {
-                        epoll_ctl(epfd, EPOLL_CTL_DEL, fd, NULL);
-                        close(fd);
-                        continue;
-                    }
-
-                    char *newline = memchr(buf, '\n', rc);
-                    if (!newline)
-                        continue;
-
-                    *newline = '\0';
-
-                    // 🔽 parsing (reutilizamos tu lógica)
-                    char *token = strtok(buf, " ");
-                    if (!token)
-                    {
-                        write(fd, "EINVAL\n", 7);
-                        continue;
-                    }
-
-                    if (strcmp(token, PUT) == 0)
-                    {
-                        char *key = strtok(NULL, " ");
-                        char *value = strtok(NULL, " ");
-
-                        if (!key || !value)
-                        {
-                            write(fd, "EINVAL\n", 7);
-                            continue;
-                        }
-
-                        pthread_mutex_lock(&mutex_store);
-
-                        if (is_key_exists(key, store, MAX_ITEMS))
-                        {
-                            pthread_mutex_unlock(&mutex_store);
-                            write(fd, "KEY EXISTS\n", 11);
-                        }
-                        else
-                        {
-                            Item *item = malloc(sizeof(Item));
-                            item->key = strdup(key);
-                            item->value = strdup(value);
-                            item->eliminated = 0;
-
-                            put_item(item, store, MAX_ITEMS);
-
-                            pthread_mutex_unlock(&mutex_store);
-                            write(fd, "OK\n", 3);
-                        }
-                    }
-                    else if (strcmp(token, GET) == 0)
-                    {
-                        char *key = strtok(NULL, " ");
-                        if (!key)
-                        {
-                            write(fd, "EINVAL\n", 7);
-                            continue;
-                        }
-
-                        pthread_mutex_lock(&mutex_store);
-                        Item *item = get_item(key, store, MAX_ITEMS);
-                        pthread_mutex_unlock(&mutex_store);
-
-                        if (item)
-                        {
-                            write(fd, "OK ", 3);
-                            write(fd, item->value, strlen(item->value));
-                            write(fd, "\n", 1);
-                        }
-                        else
-                        {
-                            write(fd, "NOTFOUND\n", 10);
-                        }
-                    }
-                    else if (strcmp(token, DEL) == 0)
-                    {
-                        char *key = strtok(NULL, " ");
-                        if (!key)
-                        {
-                            write(fd, "EINVAL\n", 7);
-                            continue;
-                        }
-
-                        pthread_mutex_lock(&mutex_store);
-                        del_item(key, store, MAX_ITEMS);
-                        pthread_mutex_unlock(&mutex_store);
-
-                        write(fd, "OK\n", 3);
-                    }
-                    else
-                    {
-                        write(fd, "EINVAL\n", 7);
-                    }
-                }
+                // Datos de un cliente
+                handle_client_request(epfd, fd);
             }
         }
     }
-}
-
-void *worker_loop(void *arg)
-{
-    int epfd = *(int *)arg;
-    struct epoll_event evlist[MAX_EVENTS];
-
-    wait_clients_with_epoll(epfd, -1, evlist);
-    return NULL;
 }
 
 int main()
@@ -215,22 +233,12 @@ int main()
     printf("Mini memcached server listening on port %d\n", PORT);
 
     int epfd = epoll_create(MAX_EVENTS);
-    struct epoll_event ev;
+    struct epoll_event ev, evlist[MAX_EVENTS];
 
     int lsock = mk_lsock();
-
     ev.events = EPOLLIN;
     ev.data.fd = lsock;
     epoll_ctl(epfd, EPOLL_CTL_ADD, lsock, &ev);
-
-    for (int i = 0; i < MAX_EVENTS; i++)
-    {
-        pthread_create(&workers[i], NULL, worker_loop, &epfd);
-    }
-    for (int i = 0; i < MAX_EVENTS; i++)
-    {
-        pthread_join(workers[i], NULL);
-    }
-
+    wait_clients_with_epoll(epfd, lsock, evlist);
     return 0;
 }
