@@ -19,8 +19,7 @@
 #define DEL "DEL"
 #define EXIT "EXIT"
 #define MAX_ITEMS 1000
-#define MAX_EVENTS 10
-pthread_t workers[MAX_EVENTS];
+#define MAX_EVENTS 10 // maximo numero de eventos que seran retornados de una sola llamada a epoll_wait 
 Item *store[MAX_ITEMS];
 
 // Mini memcached con epoll y threads. Implemente un servidor que provea un key-value store a sus clientes.
@@ -72,13 +71,14 @@ void handle_new_connection(int epfd, int lsock)
     int csock = accept(lsock, NULL, NULL);
     if (csock < 0)
         return;
+    // IMPORTANTE : para que epoll pueda detectar eventos en el socket del cliente, este debe estar en modo no bloqueante
+    fcntl(csock, F_SETFL, O_NONBLOCK); 
 
-    fcntl(csock, F_SETFL, O_NONBLOCK);
-
+    // creo el nuevo evento para el socket del cliente y lo agrego al conjunto de descriptores monitoreados por epoll
     struct epoll_event ev;
     ev.events = EPOLLIN;
     ev.data.fd = csock;
-
+    // lo agrego a la lista de intereses de epoll 
     epoll_ctl(epfd, EPOLL_CTL_ADD, csock, &ev);
 }
 
@@ -206,19 +206,22 @@ void wait_clients_with_epoll(int epfd, int lsock, struct epoll_event evlist[])
 {
     while (1)
     {
+        // n son los eventos listos para ser procesados, evlist es el array donde se almacenan los eventos listos, -1 indica que espera indefinidamente hasta que haya al menos un evento listo
         int n = epoll_wait(epfd, evlist, MAX_EVENTS, -1);
         if (n < 0)
             quit("epoll_wait");
 
+        // Procesar cada evento listo
         for (int i = 0; i < n; i++)
         {
             int fd = evlist[i].data.fd;
-
+            // si el evento es en el socket de escucha, significa que hay una nueva conexión entrante
             if (fd == lsock)
             {
                 // Nueva conexión
                 handle_new_connection(epfd, lsock);
             }
+            // si el evento es en un socket de cliente, significa que hay datos para leer (un comando del cliente)
             else if (evlist[i].events & EPOLLIN)
             {
                 // Datos de un cliente
@@ -237,8 +240,8 @@ int main()
 
     int lsock = mk_lsock();
     ev.events = EPOLLIN;
-    ev.data.fd = lsock;
-    epoll_ctl(epfd, EPOLL_CTL_ADD, lsock, &ev);
-    wait_clients_with_epoll(epfd, lsock, evlist);
+    ev.data.fd = lsock; // registramos el socket de escucha en epoll para detectar nuevas conexiones
+    epoll_ctl(epfd, EPOLL_CTL_ADD, lsock, &ev); // agregamos el socket de escucha al conjunto de descriptores monitoreados por epoll
+    wait_clients_with_epoll(epfd, lsock, evlist); 
     return 0;
 }
