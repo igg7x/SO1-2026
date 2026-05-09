@@ -7,48 +7,54 @@
 struct CStackNode* newNode_CStack(int data)
 {
     struct CStackNode* stackNode = (struct CStackNode*) malloc(sizeof(struct StackNode));
-    stackNode->stack = newNode(data);
+    stackNode->stacknode = newNode(data);
     return stackNode;
 }
  
-int isEmpty(struct StackNode* root)
+int isEmpty_CStack(struct CStackNode* root)
 {
     return !root;
 }
  
-void push_CStack(struct StackNode** root, int data)
+void push_CStack(struct CStackNode** root, int data)
 {
-
-    pthread_mutex_lock()
-    push()
-    pthread_mutex_unlock()
+    pthread_mutex_lock((*root)->mutex_CStack);
+    push(&(*root)->stacknode,data);
+    pthread_mutex_unlock((*root)->mutex_CStack);
 
 }
  
-int pop(struct StackNode** root)
+int pop_CStack(struct CStackNode** root)
 {
+    pthread_mutex_lock((*root)->mutex_CStack);
     if (isEmpty(*root))
         return INT_MIN;
-    struct StackNode* temp = *root;
-    *root = (*root)->next;
-    int popped = temp->data;
+    struct CStackNode* temp = *root;
+    *root = (*root)->stacknode->next;
+    pthread_mutex_unlock((*root)->mutex_CStack);
+    int popped = temp->stacknode->data;
     free(temp);
  
     return popped;
 }
  
-int top(struct StackNode* root)
+int top_CStack(struct CStackNode* root)
 {
-    if (isEmpty(root))
+    pthread_mutex_lock(root->mutex_CStack);
+    if (isEmpty(root)){
+        pthread_mutex_unlock(root->mutex_CStack);
         return INT_MIN;
-    return root->data;
+    }
+    pthread_mutex_unlock(root->mutex_CStack);
+    return root->stacknode->data;
 }
 
-void stackFree(struct StackNode* root)
+void stackFree_CStack(struct CStackNode* root)
 {
+  pthread_mutex_t* mutex = root->mutex_CStack;  
+  pthread_mutex_lock(root->mutex_CStack);  
   // we free the stack just popping all the elements
   while(!isEmpty(root))
-  {
-	  pop(&root);
-  }
+	  pop(&root->stacknode);
+  pthread_mutex_unlock(mutex); //al popear no va a existir mas el root del mutex  
 }
