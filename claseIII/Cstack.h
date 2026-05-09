@@ -4,8 +4,8 @@
 #include <pthread.h>
 
 struct CStackNode {  
-    struct StackNode* stack ; 
-    pthread_mutex_t mutex_CStack ; 
+    struct StackNode* stacknode ; 
+    pthread_mutex_t* mutex_CStack ; 
 };
 
 struct StackNode* newNode_CStack(int data);
