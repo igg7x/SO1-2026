@@ -8,7 +8,7 @@ struct CStackNode {
     pthread_mutex_t* mutex_CStack ; 
 };
 
-struct StackNode* newNode_CStack(int data);
+struct CStackNode* newNode_CStack(int data);
 
 int isEmpty_CStack(struct CStackNode* root);
  
