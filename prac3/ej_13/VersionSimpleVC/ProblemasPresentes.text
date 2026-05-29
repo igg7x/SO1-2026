@@ -1,0 +1,20 @@
+Hay varios problemas críticos en esta implementación de variables de condición usando semáforos.
+Entre estos es que la variable de condición tiene una semántica muy distinta a la del 
+semáforo, mientras que la primera funciona de forma binaria, es decir, no almacena señales y si
+no hay ningun waiter esta se pierde, por otro lado, el semáforo es capaz de almacenar entre 
+otros datos, los "ups" hechos. Esto trae un grave problema al seguir incrementando el contador
+lo que provoca es que estos incrementos representando señales, rompan la semántica de la señal,
+pudiendo ocurrir que dos threads en un futuro hagan wait y la función sea no bloqueante, aunque 
+la condición lógica ya no sea verdadera, mas grave aún en la lógica de Hoare.
+Otro problema es la gran dificultad para implementar broadcast, el semáforo de por sí, no sabe 
+cuantos threads están esperando, o si en el transcurso del llamado llega alguien nuevo, por lo 
+que, dificulta mucho el correcto desempeño de la función.
+En tercer lugar hay una sección crítica no protegida en la función wait, en su versión original, 
+esta hace atómicamente la liberación del mutex y la puesta a dormir del hilo, en esta 
+implementación, no se protege la región por lo que, un thread A luego de soltar el mutex, un 
+thread B (no necesariamente registrado) en un cambio de contexto puede tomarlo y si otro 
+llamémoslo C envía la señal, al no ser atómica esta no es recibida por A y termina perdiéndose.
+En conclusión un semáforo binario puede comportarse como una varibale de condición con las 
+operaciones usuales sem_post y sem_wait pero no puede imitar el broadcast y el tener varios 
+"posteadores" rompe la semántica, sumado a que la llamada my_cond_wait, tiene problemas de race
+condition.
