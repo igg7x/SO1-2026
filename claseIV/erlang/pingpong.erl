@@ -1,22 +1,26 @@
 -module(pingpong).
--export([]0)
-
-
-% Pong
-                            
-
+-export([ping/2, pong/0, start/0]).
 pong() ->
-    recive 
-    {0,Pid_ping} -> io:fwrite("Pong recive : ~p ~p ~n ,[N,Pid_pong]"), 
-        Pid_ping ! {fin,self()}
-    {N,Pid_ping} -> io:fwrite("Pong recive : ~p ~p ~n ,[N,Pid_pong]"),
+    receive 
+        {ping, PingPid} ->
+            io:format("Pong recibió ping ~n"),
+            PingPid ! pong,
+            pong();
+        stop ->
+            io:format("Pong terminó ~n")
+    end.
 
-ping() ->
+ping(0, PongPid) ->
+    PongPid ! stop,
+    io:format("Ping terminó~n");
+ping(N, PongPid) ->
+    PongPid ! {ping, self()},
+    receive
+            pong ->
+                io:format("Ping recibió pong~n")
+            end,
+    ping(N - 1, PongPid).
 
-play() ->   
-    Pid_ping = spawn(pingpong,ping,[]),
-    Pid_pong = spawn(pingpong,pong,[]),
-    Pid_pong ! {10,Pid_ping},
-    ok. %% cuando retorna la funcion play va a retornar el atomo final que le queda (ese que le puse ahi)
-
-
+start() ->
+    PongPid = spawn(pingpong, pong, []),
+    spawn(pingpong, ping, [5, PongPid]).
