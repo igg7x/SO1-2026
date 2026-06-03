@@ -1,3 +1,4 @@
+// IMPORTANTE : Esta versión si bien tiene una semántica correcta, tiene un problema de rendimiento ya que requiere dos cambios de contexto para poder signalear el thread.
 #include "VCond.h"
 // Inicializa la variable de condición.
 void my_cond_init(v_cond_t *cond)
