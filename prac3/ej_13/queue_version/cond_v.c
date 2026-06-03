@@ -18,15 +18,11 @@ void condv_wait(Cond_V *cond, pthread_mutex_t *mutex)
     // agrego el nodo a la cola de espera
     pthread_mutex_lock(&cond->mutex);
     if (cond->tail == NULL)
-    {
         cond->head = node;
-        cond->tail = node;
-    }
     else
-    {
         cond->tail->next = node;
-        cond->tail = node;
-    }
+    cond->tail = node;
+    
     cond->count_waiters++;
 
     pthread_mutex_unlock(&cond->mutex);
