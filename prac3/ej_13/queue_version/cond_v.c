@@ -22,7 +22,6 @@ void condv_wait(Cond_V *cond, pthread_mutex_t *mutex)
     else
         cond->tail->next = node;
     cond->tail = node;
-
     cond->count_waiters++;
 
     pthread_mutex_unlock(&cond->mutex);
@@ -66,6 +65,7 @@ void condv_broadcast(Cond_V *cond)
     Thread_Node *list = cond->head;
     cond->head = NULL;
     cond->tail = NULL;
+    cond->count_waiters = 0;
     pthread_mutex_unlock(&cond->mutex);
     while (list != NULL)
     {
@@ -77,16 +77,5 @@ void condv_broadcast(Cond_V *cond)
 
 void condv_destroy(Cond_V *cond)
 {
-    // destruyo todos los nodos de la cola de espera y el mutex
-    pthread_mutex_lock(&cond->mutex);
-    Thread_Node *current = cond->head;
-    while (current != NULL)
-    {
-        Thread_Node *temp = current;
-        current = current->next;
-        sem_destroy(&temp->sem);
-        free(temp);
-    }
-    pthread_mutex_unlock(&cond->mutex);
     pthread_mutex_destroy(&cond->mutex);
 }
