@@ -2,10 +2,11 @@
 #define __COND_V_H__
 #include <pthread.h>
 #include <semaphore.h>
-typedef struct
+#include <stdlib.h>
+typedef struct thread_node
 {
     sem_t sem; // semáforo para bloquear/desbloquear el hilo
-    Thread_Node *next;
+    struct thread_node *next;
 } Thread_Node; // estructura para representar un nodo en la cola de espera
 
 typedef struct
