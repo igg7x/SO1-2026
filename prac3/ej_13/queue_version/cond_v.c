@@ -22,7 +22,7 @@ void condv_wait(Cond_V *cond, pthread_mutex_t *mutex)
     else
         cond->tail->next = node;
     cond->tail = node;
-    
+
     cond->count_waiters++;
 
     pthread_mutex_unlock(&cond->mutex);
