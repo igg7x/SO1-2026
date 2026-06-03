@@ -28,9 +28,11 @@ void condv_wait(Cond_V *cond, pthread_mutex_t *mutex)
     pthread_mutex_unlock(&cond->mutex);
     // libero el mutex del hilo que va a esperar y espero a ser señalizadox
     pthread_mutex_unlock(mutex);
-    // espero a ser señalizado
     sem_wait(&node->sem);
     pthread_mutex_lock(mutex);
+    // una vez que el hilo es señalizado, libero los recursos del nodo
+    sem_destroy(&node->sem);
+    free(node);
 }
 
 void condv_signal(Cond_V *cond)
@@ -47,33 +49,30 @@ void condv_signal(Cond_V *cond)
             cond->tail = NULL;
         }
         cond->count_waiters--;
+        pthread_mutex_unlock(&cond->mutex);
         // señalizo al hilo que estaba esperando
         sem_post(&node->sem);
-        // libero el nodo
-        free(node);
     }
-    pthread_mutex_unlock(&cond->mutex);
+    else
+    {
+        pthread_mutex_unlock(&cond->mutex);
+    }
 }
 
 void condv_broadcast(Cond_V *cond)
 {
     pthread_mutex_lock(&cond->mutex);
-    while (cond->count_waiters > 0)
-    {
-        // saco el primer nodo de la cola de espera y lo señalizo
-        Thread_Node *node = cond->head;
-        cond->head = node->next;
-        if (cond->head == NULL)
-        {
-            cond->tail = NULL;
-        }
-        cond->count_waiters--;
-        // señalizo al hilo que estaba esperando
-        sem_post(&node->sem);
-        // libero el nodo
-        free(node);
-    }
+
+    Thread_Node *list = cond->head;
+    cond->head = NULL;
+    cond->tail = NULL;
     pthread_mutex_unlock(&cond->mutex);
+    while (list != NULL)
+    {
+        Thread_Node *next = list->next;
+        sem_post(&list->sem);
+        list = next;
+    }
 }
 
 void condv_destroy(Cond_V *cond)
