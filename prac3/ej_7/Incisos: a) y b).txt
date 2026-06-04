@@ -1,0 +1,23 @@
+EJERCICIO 7: FUMADORES
+a) ¿Cómo puede ocurrir un deadlock en esta implementación ingenua?
+
+    El hecho de que los fumadores tomen ingredientes representados como semáforos (Exclusión Mutua);
+espera con sem_wait el/los ingredientes que le faltan (Hold-and-wait);
+los recursos solo serán liberados cuando pueda waitear los 2 semáforos (No Preemption);
+y existe un ciclo de , al ser aleatoria la asignación, donde cada uno espera el recurso retenido por otro (Espera Circular).
+Son las condiciones necesarias para que ocurra un Deadlock, a continuación una posible secuencia de ejecución donde ocurre:
+1. Supongamos que el agente con post tabaco y papel, luego tabaco=papel=1 y fósforos= 0.
+2. Ahora también supongamos que Fumador1 ejecuta el wait del tabaco, lo toma y ocurre un cambio de contexto.
+3. Fumador3 ejecuta sem_wait(&papel) y nuevamente ocurre un cambio de contexto.
+4. Fumador1 ahora quiere tomar el papel pero este lo tiene Fumador3 y queda bloqueado.
+5. Fumador3 intenta tomar los fósforos y al estar el semáforo en 0 se queda bloqueado.
+6. Fumador2 ejecuta sem_wait(&fósforos) y también queda bloqueado.
+7. El agente espera bloqueado a que alguien levante el semáforo otra_vez pero al estar los 3 fumadores en el wait, 
+tampoco puede avanzar, ocurriendo un deadlock.
+
+b) ¿Pueden ordenarse los recursos para evitar el problema?
+
+No, no se puede romper la Espera Circular con una imposición de jerarquía ya que en primer lugar en el enunciado se 
+especifica que los ingredientes son dados al azar, por lo tanto, nunca sabemos que ingrediente es dado antes.
+Por último, los fumadores siguen consumiendo un ingrediente antes de tomar el que le falta, entonces sigue siendo 
+posible que en un orden de repartir ingredientes, un fumador tome primero el semáforo que debía consumir otro.
