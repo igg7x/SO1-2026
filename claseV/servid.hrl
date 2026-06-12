@@ -1,0 +1,1 @@
+-record(nuevoId,{nombre, clientID}).
